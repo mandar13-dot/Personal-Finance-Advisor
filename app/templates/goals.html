@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Savings Goals - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="goals-container">
+    <div class="goals-header">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+        <div class="header-content">
+            <div>
+                <h1>Savings Goals</h1>
+                <p class="section-subtitle">Track your savings targets, add contributions, and monitor your milestone progress.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Summary Banner if goals exist -->
+    {% if goals and goals|length > 0 %}
+        <div class="card goals-summary-card">
+            <div class="summary-stat-row">
+                <div class="stat-box">
+                    <span class="stat-label">Total Saved</span>
+                    <span class="stat-value positive-text">₹{{ "{:,.2f}".format(total_saved) }}</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Total Target</span>
+                    <span class="stat-value">₹{{ "{:,.2f}".format(total_target) }}</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Total Remaining</span>
+                    <span class="stat-value">₹{{ "{:,.2f}".format(total_remaining) }}</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Overall Progress</span>
+                    <span class="stat-value">{{ overall_progress }}%</span>
+                </div>
+            </div>
+            <div class="progress-bar-bg summary-progress">
+                <div class="progress-bar-fill {% if overall_progress >= 100 %}completed{% endif %}" style="width: {{ [overall_progress, 100.0]|min }}%;"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="goals-layout-grid">
+        <!-- Create Goal Card -->
+        <div class="card create-goal-card">
+            <h3>Create New Savings Goal</h3>
+            <p class="card-subtitle">Define a new target to set aside savings.</p>
+
+            <form method="POST" action="{{ url_for('goals.create_goal') }}" class="form-body">
+                <div class="form-group">
+                    <label for="goal_name">Goal Name</label>
+                    <input
+                        type="text"
+                        id="goal_name"
+                        name="goal_name"
+                        class="form-control"
+                        placeholder="e.g. Emergency Fund, New Laptop, Vacation"
+                        maxlength="100"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="target_amount">Target Amount (₹)</label>
+                    <div class="input-with-symbol">
+                        <span class="currency-symbol">₹</span>
+                        <input
+                            type="number"
+                            id="target_amount"
+                            name="target_amount"
+                            class="form-control"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0.01"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="current_amount">Current Saved Amount (₹)</label>
+                    <div class="input-with-symbol">
+                        <span class="currency-symbol">₹</span>
+                        <input
+                            type="number"
+                            id="current_amount"
+                            name="current_amount"
+                            class="form-control"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            value="0.00"
+                        >
+                    </div>
+                    <small class="field-hint">Initial funds already accumulated for this goal</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="target_date">Target Date (Optional)</label>
+                    <input
+                        type="date"
+                        id="target_date"
+                        name="target_date"
+                        class="form-control"
+                        min="{{ today }}"
+                    >
+                    <small class="field-hint">Deadline for reaching your target</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-save">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Create Goal
+                </button>
+            </form>
+        </div>
+
+        <!-- Goals List Section -->
+        <div class="goals-list-section">
+            {% if goals and goals|length > 0 %}
+                <div class="goals-cards-list">
+                    {% for goal in goals %}
+                        <div class="card goal-item-card {% if goal.is_completed %}card-completed{% endif %}">
+                            <div class="goal-item-header">
+                                <div>
+                                    <h4 class="goal-title">{{ goal.goal_name }}</h4>
+                                    {% if goal.target_date %}
+                                        <span class="goal-deadline">Target Date: {{ goal.target_date.strftime('%b %d, %Y') }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if goal.is_completed %}
+                                    <span class="badge-status badge-completed">✓ Goal Reached!</span>
+                                {% else %}
+                                    <span class="badge-status badge-progress">{{ goal.progress_percentage }}%</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div class="goal-progress-wrap">
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill {% if goal.is_completed %}completed{% endif %}" style="width: {{ goal.progress_bar_width }}%;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Metrics Row -->
+                            <div class="goal-metrics-row">
+                                <div class="goal-metric">
+                                    <span class="label">Saved</span>
+                                    <span class="value positive-text">₹{{ "{:,.2f}".format(goal.current_amount) }}</span>
+                                </div>
+                                <div class="goal-metric">
+                                    <span class="label">Target</span>
+                                    <span class="value">₹{{ "{:,.2f}".format(goal.target_amount) }}</span>
+                                </div>
+                                <div class="goal-metric">
+                                    <span class="label">Remaining</span>
+                                    <span class="value">₹{{ "{:,.2f}".format(goal.remaining_amount) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Add Funds Form & Actions -->
+                            <div class="goal-actions-row">
+                                <form method="POST" action="{{ url_for('goals.add_funds', goal_id=goal.id) }}" class="add-funds-form">
+                                    <div class="input-with-symbol mini-input">
+                                        <span class="currency-symbol">₹</span>
+                                        <input
+                                            type="number"
+                                            name="amount"
+                                            placeholder="Amount"
+                                            step="0.01"
+                                            min="0.01"
+                                            class="form-control form-control-sm"
+                                            required
+                                        >
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-primary">+ Add Savings</button>
+                                </form>
+
+                                <div class="goal-btn-group">
+                                    <a href="{{ url_for('goals.edit_goal', goal_id=goal.id) }}" class="btn btn-sm btn-outline">Edit</a>
+                                    <form method="POST" action="{{ url_for('goals.delete_goal', goal_id=goal.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this savings goal?');">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card empty-state-panel">
+                    <div class="empty-state-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                    </div>
+                    <h4>No savings goals yet.</h4>
+                    <p>Use the form to set up your first goal, whether it is an emergency reserve or a personal dream milestone.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

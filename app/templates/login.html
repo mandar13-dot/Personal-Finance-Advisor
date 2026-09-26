@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <div class="auth-header">
+        <h2>Welcome Back</h2>
+        <p>Log in to access your financial dashboard and insights.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" required autofocus>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Log In</button>
+    </form>
+
+    <div class="auth-footer">
+        <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a></p>
+    </div>
+</div>
+{% endblock %}

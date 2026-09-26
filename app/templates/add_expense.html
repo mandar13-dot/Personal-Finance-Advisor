@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Add Expense - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <div class="form-card-header">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+        <h2>Add Expense</h2>
+        <p>Log a daily or weekly expense to track where your money goes.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('expense.add_expense') }}" class="form-body">
+        <div class="form-group">
+            <label for="amount">Expense Amount (₹)</label>
+            <div class="input-with-symbol">
+                <span class="currency-symbol">₹</span>
+                <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    class="form-control"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0.01"
+                    value="{{ amount or '' }}"
+                    required
+                    autofocus
+                >
+            </div>
+            <small class="field-hint">Enter a positive amount (e.g. 450.00)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category" class="form-control" required>
+                <option value="" disabled {% if not selected_category %}selected{% endif %}>Select an expense category</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+            <small class="field-hint">Categorizing helps uncover spending habits</small>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description (Optional)</label>
+            <input
+                type="text"
+                id="description"
+                name="description"
+                class="form-control"
+                placeholder="e.g. Weekly groceries, Metro card recharge"
+                maxlength="255"
+                value="{{ description or '' }}"
+            >
+            <small class="field-hint">Brief note describing this expense (max 255 characters)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="date">Date</label>
+            <input
+                type="date"
+                id="date"
+                name="date"
+                class="form-control"
+                value="{{ date_val or '' }}"
+                required
+            >
+            <small class="field-hint">Date of transaction (defaults to today)</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-save btn-expense-save">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Save Expense
+            </button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

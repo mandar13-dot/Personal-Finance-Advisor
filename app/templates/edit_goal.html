@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Goal - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <div class="form-card-header">
+        <a href="{{ url_for('goals.list_goals') }}" class="back-link">&larr; Back to Savings Goals</a>
+        <h2>Edit Savings Goal</h2>
+        <p>Update the parameters or target date for <strong>{{ goal.goal_name }}</strong>.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('goals.edit_goal', goal_id=goal.id) }}" class="form-body">
+        <div class="form-group">
+            <label for="goal_name">Goal Name</label>
+            <input
+                type="text"
+                id="goal_name"
+                name="goal_name"
+                class="form-control"
+                value="{{ goal.goal_name }}"
+                maxlength="100"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="target_amount">Target Amount (₹)</label>
+            <div class="input-with-symbol">
+                <span class="currency-symbol">₹</span>
+                <input
+                    type="number"
+                    id="target_amount"
+                    name="target_amount"
+                    class="form-control"
+                    step="0.01"
+                    min="0.01"
+                    value="{{ goal.target_amount }}"
+                    required
+                >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="current_amount">Current Saved Amount (₹)</label>
+            <div class="input-with-symbol">
+                <span class="currency-symbol">₹</span>
+                <input
+                    type="number"
+                    id="current_amount"
+                    name="current_amount"
+                    class="form-control"
+                    step="0.01"
+                    min="0"
+                    value="{{ goal.current_amount }}"
+                    required
+                >
+            </div>
+            <small class="field-hint">Adjust current funds saved toward this goal</small>
+        </div>
+
+        <div class="form-group">
+            <label for="target_date">Target Date (Optional)</label>
+            <input
+                type="date"
+                id="target_date"
+                name="target_date"
+                class="form-control"
+                value="{{ goal.target_date.isoformat() if goal.target_date else '' }}"
+            >
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-save">
+                Save Changes
+            </button>
+            <a href="{{ url_for('goals.list_goals') }}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

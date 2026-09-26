@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}AI Financial Advisor ({{ month_title }}) - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="advisor-container">
+    <!-- Header & Month Selection -->
+    <div class="advisor-header">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+        <div class="advisor-header-row">
+            <div>
+                <div class="advisor-title-badge-wrap">
+                    <h1>AI Financial Advisor</h1>
+                    <span class="pill-badge badge-ai-sparkle">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        Gemini Powered
+                    </span>
+                </div>
+                <p class="section-subtitle">Personalized financial intelligence and actionable recommendations based strictly on your real transactions for <strong>{{ month_title }}</strong>.</p>
+            </div>
+
+            <!-- Month Selector & Refresh Form -->
+            <form method="GET" action="{{ url_for('advisor.advisor_dashboard') }}" class="advisor-month-form">
+                <label for="advisor-month" class="visually-hidden">Select Month</label>
+                <input
+                    type="month"
+                    id="advisor-month"
+                    name="month"
+                    value="{{ selected_month }}"
+                    class="form-control advisor-month-input"
+                    required
+                >
+                <button type="submit" class="btn btn-primary btn-advisor-refresh">Refresh Analysis</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Advisor Status Banner (if missing key or API failure) -->
+    {% if not ai.available %}
+        {% if ai.status == 'missing_key' %}
+            <div class="advisor-alert-banner alert-warning-box">
+                <div class="alert-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="alert-body">
+                    <h4>AI Recommendations Unavailable (API Key Not Configured)</h4>
+                    <p>The Gemini AI integration is currently standby because the <code>GEMINI_API_KEY</code> environment variable is not set. Your deterministic financial calculations and spending analysis are displayed below.</p>
+                </div>
+            </div>
+        {% elif ai.status == 'api_error' %}
+            <div class="advisor-alert-banner alert-danger-box">
+                <div class="alert-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="alert-body">
+                    <h4>AI Advisor Service Notice</h4>
+                    <p>{{ ai.message }} Your calculated financial analysis and metrics are fully available below.</p>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- If user has NO financial data -->
+    {% if not analysis.has_data %}
+        <div class="card empty-state-advisor-card">
+            <div class="empty-state-icon">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+            </div>
+            <h3>No Financial Data Available Yet</h3>
+            <p>The AI Financial Advisor analyzes your actual income, category expenses, budget limits, and savings goals to generate personalized recommendations. Start by recording your financial transactions:</p>
+            
+            <div class="empty-advisor-actions">
+                <a href="{{ url_for('income.add_income') }}" class="btn btn-outline-primary">Add Income</a>
+                <a href="{{ url_for('expense.add_expense') }}" class="btn btn-outline-danger-btn">Add Expense</a>
+                <a href="{{ url_for('budget.manage_budget') }}" class="btn btn-outline-teal">Set Monthly Budget</a>
+                <a href="{{ url_for('goals.list_goals') }}" class="btn btn-outline-purple">Create Savings Goal</a>
+            </div>
+        </div>
+    {% else %}
+        <!-- ========================================================
+             SECTION 1: DETERMINISTIC FINANCIAL ANALYSIS LAYER (FACTS)
+             ======================================================== -->
+        <div class="advisor-section-header">
+            <div class="section-title-wrap">
+                <h2>1. Financial Fact Analysis</h2>
+                <p>Deterministic calculations derived from your SQLite financial ledger for <strong>{{ month_title }}</strong></p>
+            </div>
+            <span class="pill-badge badge-facts">Calculated Facts</span>
+        </div>
+
+        <!-- 4 Key Financial Metrics Cards -->
+        <div class="advisor-metrics-grid">
+            <!-- Monthly Income -->
+            <div class="card advisor-stat-card card-income">
+                <span class="stat-title">Monthly Income</span>
+                <span class="stat-amount positive-text">₹{{ "{:,.2f}".format(analysis.monthly_income) }}</span>
+                <span class="stat-meta">{{ analysis.income_count }} transaction{{ 's' if analysis.income_count != 1 else '' }} in {{ month_title }}</span>
+            </div>
+
+            <!-- Monthly Expenses -->
+            <div class="card advisor-stat-card card-expense">
+                <span class="stat-title">Monthly Expenses</span>
+                <span class="stat-amount negative-text">₹{{ "{:,.2f}".format(analysis.monthly_expenses) }}</span>
+                <span class="stat-meta">{{ analysis.expense_count }} transaction{{ 's' if analysis.expense_count != 1 else '' }} in {{ month_title }}</span>
+            </div>
+
+            <!-- Net Savings & Rate -->
+            <div class="card advisor-stat-card card-savings">
+                <span class="stat-title">Net Savings</span>
+                {% if analysis.net_savings >= 0 %}
+                    <span class="stat-amount positive-text">₹{{ "{:,.2f}".format(analysis.net_savings) }}</span>
+                    <span class="stat-meta">{{ analysis.savings_rate }}% savings rate</span>
+                {% else %}
+                    <span class="stat-amount negative-text">-₹{{ "{:,.2f}".format(analysis.net_savings|abs) }}</span>
+                    <span class="stat-meta negative-text">Deficit (Expenses > Income)</span>
+                {% endif %}
+            </div>
+
+            <!-- Budget Status -->
+            <div class="card advisor-stat-card card-budget {% if analysis.budget_info.exceeded %}card-exceeded{% endif %}">
+                <span class="stat-title">Budget Remaining</span>
+                {% if analysis.budget_info.has_budget %}
+                    <span class="stat-amount {% if analysis.budget_info.exceeded %}negative-text{% endif %}">
+                        {% if analysis.budget_info.exceeded %}
+                            -₹{{ "{:,.2f}".format(analysis.budget_info.exceeded_amount) }}
+                        {% else %}
+                            ₹{{ "{:,.2f}".format(analysis.budget_info.remaining) }}
+                        {% endif %}
+                    </span>
+                    <span class="stat-meta">
+                        {% if analysis.budget_info.exceeded %}
+                            Exceeded ({{ analysis.budget_info.usage_pct }}% utilized)
+                        {% else %}
+                            {{ analysis.budget_info.usage_pct }}% of ₹{{ "{:,.2f}".format(analysis.budget_info.amount) }} spent
+                        {% endif %}
+                    </span>
+                {% else %}
+                    <span class="stat-amount text-muted">₹0.00</span>
+                    <span class="stat-meta">No budget set for {{ month_title }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Breakdown & Pattern Details Grid -->
+        <div class="advisor-two-col-grid">
+            <!-- Left Column: Spending Breakdown & Top Category -->
+            <div class="card advisor-panel-card">
+                <div class="card-header-clean">
+                    <h3>Spending Breakdown & Top Category</h3>
+                    {% if analysis.highest_category %}
+                        <span class="pill-badge badge-top-cat">Top: {{ analysis.highest_category.category }}</span>
+                    {% endif %}
+                </div>
+
+                {% if analysis.highest_category %}
+                    <div class="highest-cat-highlight">
+                        <div class="high-cat-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div class="high-cat-info">
+                            <span class="high-cat-title">Highest Spending Category: <strong>{{ analysis.highest_category.category }}</strong></span>
+                            <span class="high-cat-desc">Consumes <strong>{{ analysis.highest_category.percentage }}%</strong> of monthly expenses (₹{{ "{:,.2f}".format(analysis.highest_category.total) }})</span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if analysis.category_breakdown and analysis.category_breakdown|length > 0 %}
+                    <div class="category-bars-list" style="margin-top: 1rem;">
+                        {% for cat in analysis.category_breakdown %}
+                            <div class="category-bar-item">
+                                <div class="category-bar-label-row">
+                                    <span class="cat-name">{{ cat.category }}</span>
+                                    <div class="cat-numbers">
+                                        <span class="cat-amount">₹{{ "{:,.2f}".format(cat.total) }}</span>
+                                        <span class="cat-pct">({{ cat.percentage }}%)</span>
+                                    </div>
+                                </div>
+                                <div class="progress-bar-bg cat-bar-bg">
+                                    <div class="progress-bar-fill cat-bar-fill" style="width: {{ cat.percentage }}%;"></div>
+                                </div>
+                                <span class="cat-tx-count">{{ cat.count }} transaction{{ 's' if cat.count != 1 else '' }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted" style="padding: 1.5rem 0;">No expense transactions logged for this month.</p>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Budget Adherence & Spending Patterns -->
+            <div class="card advisor-panel-card">
+                <div class="card-header-clean">
+                    <h3>Budget, Goals & Spending Patterns</h3>
+                    {% if analysis.budget_info.has_budget %}
+                        <span class="pill-badge {% if analysis.budget_info.exceeded %}badge-danger-tag{% else %}badge-success-tag{% endif %}">
+                            {% if analysis.budget_info.exceeded %}Over Budget{% else %}On Track{% endif %}
+                        </span>
+                    {% else %}
+                        <span class="pill-badge">Unbudgeted</span>
+                    {% endif %}
+                </div>
+
+                <!-- Budget Bar -->
+                {% if analysis.budget_info.has_budget %}
+                    <div class="advisor-sub-box">
+                        <div class="b-row">
+                            <span class="b-lbl">Monthly Budget Utilization</span>
+                            <span class="b-val">{{ analysis.budget_info.usage_pct }}%</span>
+                        </div>
+                        <div class="progress-bar-bg" style="margin-top: 0.4rem;">
+                            <div
+                                class="progress-bar-fill {% if analysis.budget_info.exceeded %}completed-danger{% elif analysis.budget_info.usage_pct > 80 %}completed-warning{% endif %}"
+                                style="width: {{ [analysis.budget_info.usage_pct, 100.0]|min }}%;"
+                            ></div>
+                        </div>
+                        <div class="b-details" style="margin-top: 0.4rem;">
+                            <span>Limit: ₹{{ "{:,.2f}".format(analysis.budget_info.amount) }}</span>
+                            <span>Spent: ₹{{ "{:,.2f}".format(analysis.monthly_expenses) }}</span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Goals summary -->
+                {% if analysis.goals_info.count > 0 %}
+                    <div class="advisor-sub-box" style="margin-top: 0.75rem;">
+                        <div class="b-row">
+                            <span class="b-lbl">Active Savings Goals ({{ analysis.goals_info.count }})</span>
+                            <span class="b-val">{{ analysis.goals_info.overall_pct }}% Funded</span>
+                        </div>
+                        <div class="progress-bar-bg" style="margin-top: 0.4rem;">
+                            <div class="progress-bar-fill completed" style="width: {{ [analysis.goals_info.overall_pct, 100.0]|min }}%;"></div>
+                        </div>
+                        <div class="b-details" style="margin-top: 0.4rem;">
+                            <span>Saved: ₹{{ "{:,.2f}".format(analysis.goals_info.total_saved) }}</span>
+                            <span>Target: ₹{{ "{:,.2f}".format(analysis.goals_info.total_target) }}</span>
+                        </div>
+                        <div class="advisor-goals-mini-list" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                            {% for g in analysis.goals_info.goals %}
+                                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #475569;">
+                                    <span><strong>{{ g.name }}</strong></span>
+                                    <span>{{ g.progress_percentage }}% (₹{{ "{:,.2f}".format(g.current_amount) }})</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Deterministic Patterns List -->
+                <div class="spending-patterns-box" style="margin-top: 1rem;">
+                    <h4>Key Financial Facts</h4>
+                    <ul class="patterns-bullet-list">
+                        {% for pattern in analysis.spending_patterns %}
+                            <li>{{ pattern }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             SECTION 2: AI-GENERATED ADVISOR INSIGHTS & RECOMMENDATIONS
+             ======================================================== -->
+        <div class="advisor-section-header" style="margin-top: 1.5rem;">
+            <div class="section-title-wrap">
+                <h2>2. Personalized AI Recommendations</h2>
+                <p>Tailored insights and strategic recommendations generated by Gemini AI</p>
+            </div>
+            <span class="pill-badge badge-ai-sparkle">Gemini AI Advisor</span>
+        </div>
+
+        {% if ai.available and ai.sections %}
+            <div class="ai-cards-grid">
+                <!-- 1. Financial Summary Card -->
+                <div class="card ai-card">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-summary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                            </div>
+                            <h3>Financial Summary</h3>
+                        </div>
+                        <span class="ai-card-tag">Overview</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.financial_summary | nl2br if ai.sections.financial_summary else "Summary analysis based on your monthly cash flow." }}</p>
+                    </div>
+                </div>
+
+                <!-- 2. Spending Insights Card -->
+                <div class="card ai-card">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-spending">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                                    <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                                </svg>
+                            </div>
+                            <h3>Spending Insights</h3>
+                        </div>
+                        <span class="ai-card-tag">Categories</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.spending_insights | nl2br if ai.sections.spending_insights else "Insights evaluating category distributions and top spend areas." }}</p>
+                    </div>
+                </div>
+
+                <!-- 3. Budget Analysis Card -->
+                <div class="card ai-card">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-budget">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                                </svg>
+                            </div>
+                            <h3>Budget Analysis</h3>
+                        </div>
+                        <span class="ai-card-tag">Limits &amp; Velocity</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.budget_analysis | nl2br if ai.sections.budget_analysis else "Assessment of your spending budget adherence and sustainability." }}</p>
+                    </div>
+                </div>
+
+                <!-- 4. Savings Analysis Card -->
+                <div class="card ai-card">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-savings">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M16 12l-4-4-4 4"></path>
+                                    <path d="M12 16V8"></path>
+                                </svg>
+                            </div>
+                            <h3>Savings Analysis</h3>
+                        </div>
+                        <span class="ai-card-tag">Goals &amp; Growth</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.savings_analysis | nl2br if ai.sections.savings_analysis else "Evaluation of savings velocity and progress toward financial milestones." }}</p>
+                    </div>
+                </div>
+
+                <!-- 5. Personalized Recommendations Card -->
+                <div class="card ai-card ai-card-highlight">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-recs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                                </svg>
+                            </div>
+                            <h3>Personalized Recommendations</h3>
+                        </div>
+                        <span class="ai-card-tag tag-gold">Top Recommendations</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.recommendations | nl2br if ai.sections.recommendations else "Tailored actionable advice to optimize your financial trajectory." }}</p>
+                    </div>
+                </div>
+
+                <!-- 6. Suggested Next Steps Card -->
+                <div class="card ai-card ai-card-steps">
+                    <div class="ai-card-header">
+                        <div class="ai-header-left">
+                            <div class="ai-badge-icon icon-steps">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 11 12 14 22 4"></polyline>
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                                </svg>
+                            </div>
+                            <h3>Suggested Next Steps</h3>
+                        </div>
+                        <span class="ai-card-tag tag-green">Action Plan</span>
+                    </div>
+                    <div class="ai-card-content">
+                        <p>{{ ai.sections.next_steps | nl2br if ai.sections.next_steps else "Immediate tactical actions to take this week." }}</p>
+                    </div>
+                </div>
+            </div>
+        {% elif ai.available and ai.raw_text %}
+            <div class="card ai-card-raw">
+                <div class="ai-card-header">
+                    <h3>AI Financial Analysis</h3>
+                    <span class="pill-badge badge-ai-sparkle">Gemini Generated</span>
+                </div>
+                <div class="ai-raw-text">
+                    {{ ai.raw_text | nl2br }}
+                </div>
+            </div>
+        {% else %}
+            <!-- AI Not Available Fallback Callout -->
+            <div class="card ai-fallback-card">
+                <div class="fallback-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"></path>
+                        <path d="M9 21h6"></path>
+                    </svg>
+                </div>
+                <h4>AI Insights Standby</h4>
+                <p>AI recommendations are currently disabled until <code>GEMINI_API_KEY</code> is configured in your application environment. Your calculated financial metrics, category distributions, and spending facts above remain fully active and updated.</p>
+                <div class="fallback-meta">
+                    <span>Config: Add <code>GEMINI_API_KEY=your_key</code> to your environment file</span>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

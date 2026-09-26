@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Budget - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <div class="form-card-header">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+        <h2>Monthly Spending Budget</h2>
+        <p>Set a spending limit to control expenses and track your remaining budget.</p>
+    </div>
+
+    {% if existing_budget %}
+        <div class="alert alert-info" role="alert">
+            Current budget for <strong>{{ selected_month }}</strong> is <strong>₹{{ "{:,.2f}".format(existing_budget.amount) }}</strong>. Submitting will update this budget.
+        </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('budget.manage_budget') }}" class="form-body">
+        <div class="form-group">
+            <label for="month">Select Month</label>
+            <input
+                type="month"
+                id="month"
+                name="month"
+                class="form-control"
+                value="{{ selected_month }}"
+                required
+            >
+            <small class="field-hint">Choose the month you want to budget for (YYYY-MM)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Monthly Budget Limit (₹)</label>
+            <div class="input-with-symbol">
+                <span class="currency-symbol">₹</span>
+                <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    class="form-control"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0.01"
+                    value="{{ existing_budget.amount if existing_budget else (amount or '') }}"
+                    required
+                    autofocus
+                >
+            </div>
+            <small class="field-hint">Enter your planned total spending limit for this month</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-save btn-budget-save">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                    <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                </svg>
+                {% if existing_budget %}Update Budget{% else %}Save Budget{% endif %}
+            </button>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+
+    {% if all_budgets and all_budgets|length > 0 %}
+        <div class="budget-history-section">
+            <h3 class="budget-history-title">Your Configured Budgets</h3>
+            <div class="budget-history-list">
+                {% for b in all_budgets %}
+                    <div class="budget-history-item">
+                        <span class="budget-month-badge">{{ b.month }}</span>
+                        <span class="budget-history-amount">₹{{ "{:,.2f}".format(b.amount) }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

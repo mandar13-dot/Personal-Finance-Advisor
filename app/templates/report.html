@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Report ({{ month_title }}) - Personal Finance Advisor{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Report Top Header & Month Filter Form -->
+    <div class="report-header">
+        <a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+        <div class="report-header-row">
+            <div>
+                <h1>Monthly Financial Statement</h1>
+                <p class="section-subtitle">Financial performance, category distribution, and budget tracking for <strong>{{ month_title }}</strong>.</p>
+            </div>
+            <!-- Month Selector Form -->
+            <form method="GET" action="{{ url_for('reports.monthly_report') }}" class="report-month-form">
+                <label for="month-select" class="visually-hidden">Select Month</label>
+                <input
+                    type="month"
+                    id="month-select"
+                    name="month"
+                    value="{{ month_key }}"
+                    class="form-control report-month-input"
+                    required
+                >
+                <button type="submit" class="btn btn-primary btn-generate">Generate Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Executive Summary Cards Grid -->
+    <div class="report-summary-grid">
+        <!-- Income Card -->
+        <div class="card report-stat-card income-stat">
+            <span class="stat-title">Monthly Income</span>
+            <span class="stat-amount positive-text">₹{{ "{:,.2f}".format(monthly_income) }}</span>
+            <span class="stat-meta">{{ income_count }} income transaction{{ 's' if income_count != 1 else '' }}</span>
+        </div>
+
+        <!-- Expense Card -->
+        <div class="card report-stat-card expense-stat">
+            <span class="stat-title">Monthly Expenses</span>
+            <span class="stat-amount negative-text">₹{{ "{:,.2f}".format(monthly_expenses) }}</span>
+            <span class="stat-meta">{{ expense_count }} expense transaction{{ 's' if expense_count != 1 else '' }}</span>
+        </div>
+
+        <!-- Net Savings Card -->
+        <div class="card report-stat-card savings-stat">
+            <span class="stat-title">Net Savings</span>
+            {% if net_savings >= 0 %}
+                <span class="stat-amount positive-text">₹{{ "{:,.2f}".format(net_savings) }}</span>
+                <span class="stat-meta">{{ savings_rate }}% savings rate</span>
+            {% else %}
+                <span class="stat-amount negative-text">-₹{{ "{:,.2f}".format(abs(net_savings)) }}</span>
+                <span class="stat-meta negative-text">Net Deficit</span>
+            {% endif %}
+        </div>
+
+        <!-- Budget Card -->
+        <div class="card report-stat-card budget-stat {% if budget_exceeded %}card-exceeded{% endif %}">
+            <span class="stat-title">Monthly Budget</span>
+            {% if has_budget %}
+                <span class="stat-amount {% if budget_exceeded %}negative-text{% endif %}">
+                    {% if budget_exceeded %}
+                        -₹{{ "{:,.2f}".format(abs_budget_remaining) }}
+                    {% else %}
+                        ₹{{ "{:,.2f}".format(budget_remaining) }}
+                    {% endif %}
+                </span>
+                <span class="stat-meta">
+                    {% if budget_exceeded %}
+                        Budget Exceeded by ₹{{ "{:,.2f}".format(abs_budget_remaining) }}
+                    {% else %}
+                        Remaining of ₹{{ "{:,.2f}".format(budget_amount) }}
+                    {% endif %}
+                </span>
+            {% else %}
+                <span class="stat-amount text-muted">₹0.00</span>
+                <span class="stat-meta">No budget set for this month</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Category Breakdown & Budget Analysis Grid -->
+    <div class="report-two-col-grid">
+        <!-- Category-wise Expense Visualization -->
+        <div class="card report-section-card">
+            <div class="card-header-clean">
+                <h3>Category-wise Expense Breakdown</h3>
+                <span class="pill-badge">{{ category_breakdown|length }} Categories</span>
+            </div>
+
+            {% if category_breakdown and category_breakdown|length > 0 %}
+                <div class="category-bars-list">
+                    {% for cat in category_breakdown %}
+                        <div class="category-bar-item">
+                            <div class="category-bar-label-row">
+                                <span class="cat-name">{{ cat.category }}</span>
+                                <div class="cat-numbers">
+                                    <span class="cat-amount">₹{{ "{:,.2f}".format(cat.total) }}</span>
+                                    <span class="cat-pct">({{ cat.percentage }}%)</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar-bg cat-bar-bg">
+                                <div class="progress-bar-fill cat-bar-fill" style="width: {{ cat.percentage }}%;"></div>
+                            </div>
+                            <span class="cat-tx-count">{{ cat.count }} transaction{{ 's' if cat.count != 1 else '' }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state-report">
+                    <p>No expense transactions recorded for {{ month_title }}.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Budget & Savings Goals Performance -->
+        <div class="card report-section-card">
+            <div class="card-header-clean">
+                <h3>Budget & Goal Performance</h3>
+                {% if has_budget %}
+                    <span class="pill-badge {% if budget_exceeded %}badge-danger-tag{% else %}badge-success-tag{% endif %}">
+                        {% if budget_exceeded %}Exceeded{% else %}On Track{% endif %}
+                    </span>
+                {% else %}
+                    <span class="pill-badge">Unbudgeted</span>
+                {% endif %}
+            </div>
+
+            <!-- Budget Performance Box -->
+            <div class="budget-performance-box">
+                <h4>Monthly Budget Analysis</h4>
+                {% if has_budget %}
+                    <div class="budget-stat-summary">
+                        <div class="b-stat">
+                            <span class="lbl">Budget Limit</span>
+                            <span class="val">₹{{ "{:,.2f}".format(budget_amount) }}</span>
+                        </div>
+                        <div class="b-stat">
+                            <span class="lbl">Actual Expenses</span>
+                            <span class="val negative-text">₹{{ "{:,.2f}".format(monthly_expenses) }}</span>
+                        </div>
+                        <div class="b-stat">
+                            <span class="lbl">{% if budget_exceeded %}Over Budget By{% else %}Budget Left{% endif %}</span>
+                            <span class="val {% if budget_exceeded %}negative-text{% else %}positive-text{% endif %}">
+                                ₹{{ "{:,.2f}".format(abs_budget_remaining if budget_exceeded else budget_remaining) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-bg budget-bar-bg">
+                        <div
+                            class="progress-bar-fill {% if budget_exceeded %}completed-danger{% elif budget_usage_pct > 80 %}completed-warning{% endif %}"
+                            style="width: {{ [budget_usage_pct, 100.0]|min }}%;"
+                        ></div>
+                    </div>
+                    <span class="budget-usage-text">{{ budget_usage_pct }}% of spending budget utilized</span>
+                {% else %}
+                    <p class="text-muted">No monthly spending limit was set for {{ month_title }}. Setting a budget helps evaluate financial restraint.</p>
+                {% endif %}
+            </div>
+
+            <!-- Savings Goals Summary in Report -->
+            <div class="report-goals-box">
+                <h4>Savings Goals Progress</h4>
+                {% if savings_goals and savings_goals|length > 0 %}
+                    <div class="report-goals-list">
+                        {% for g in savings_goals %}
+                            <div class="report-goal-row">
+                                <div class="goal-info">
+                                    <span class="goal-row-title">{{ g.goal_name }}</span>
+                                    <span class="goal-row-progress">{{ g.progress_percentage }}%</span>
+                                </div>
+                                <div class="progress-bar-bg mini-progress">
+                                    <div class="progress-bar-fill {% if g.is_completed %}completed{% endif %}" style="width: {{ g.progress_bar_width }}%;"></div>
+                                </div>
+                                <div class="goal-row-amounts">
+                                    <span>Saved: ₹{{ "{:,.2f}".format(g.current_amount) }}</span>
+                                    <span>Target: ₹{{ "{:,.2f}".format(g.target_amount) }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No active savings goals recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Transaction Ledger for Selected Month -->
+    <div class="card report-transactions-card">
+        <div class="card-header-clean">
+            <div>
+                <h3>All Transactions for {{ month_title }}</h3>
+                <p class="panel-subtitle">Comprehensive ledger of all recorded income and expenses</p>
+            </div>
+            <span class="pill-badge">{{ month_transactions|length }} Records</span>
+        </div>
+
+        {% if month_transactions and month_transactions|length > 0 %}
+            <div class="table-responsive">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category / Source</th>
+                            <th>Description</th>
+                            <th class="text-right">Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in month_transactions %}
+                            <tr>
+                                <td>{{ tx.date.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    {% if tx.type == 'income' %}
+                                        <span class="tx-badge-pill tx-income-pill">Income</span>
+                                    {% else %}
+                                        <span class="tx-badge-pill tx-expense-pill">Expense</span>
+                                    {% endif %}
+                                </td>
+                                <td class="tx-cell-bold">{{ tx.category }}</td>
+                                <td class="text-muted">{{ tx.title }}</td>
+                                <td class="text-right tx-cell-bold {% if tx.type == 'income' %}positive-amount{% else %}negative-amount{% endif %}">
+                                    {% if tx.type == 'income' %}+₹{{ "{:,.2f}".format(tx.amount) }}{% else %}-₹{{ "{:,.2f}".format(tx.amount) }}{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state-panel">
+                <div class="empty-state-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="20" x2="12" y2="10"></line>
+                        <line x1="18" y1="20" x2="18" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="16"></line>
+                    </svg>
+                </div>
+                <h4>No transactions recorded for {{ month_title }}.</h4>
+                <p>Use the month selector above to inspect other months, or log income and expenses to populate this period's ledger.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
