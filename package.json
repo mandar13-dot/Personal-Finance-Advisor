@@ -1,0 +1,8 @@
+{
+  "name": "personal-finance-advisor",
+  "version": "1.0.0",
+  "description": "Personal Finance Advisor Flask Web Application",
+  "scripts": {
+    "start": ".venv\\Scripts\\python.exe run.py"
+  }
+}
